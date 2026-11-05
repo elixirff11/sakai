@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>ZDT1 を NSGA-II で追う</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="titles">
+      <p class="eyebrow">多目的最適化 · 決定変数 30 · 最小化</p>
+      <div class="title-line">
+        <h1>ZDT1 を NSGA-II で追う</h1>
+        <div class="stats" aria-live="polite">
+          <div class="stat">
+            <span class="stat-k">世代</span>
+            <span class="stat-v"><span id="gen">0</span><span class="stat-sub"> / <span id="capLabel">200</span></span></span>
+          </div>
+          <div class="stat">
+            <span class="stat-k">個体群</span>
+            <span class="stat-v" id="popSizeLabel">80</span>
+          </div>
+          <div class="stat">
+            <span class="stat-k">x<sub>2</sub>…x<sub>30</sub> の平均</span>
+            <span class="stat-v" id="meanTail">0.500</span>
+          </div>
+          <div class="stat">
+            <span class="stat-k">フロントとの差</span>
+            <span class="stat-v" id="frontGap">—</span>
+          </div>
+        </div>
+      </div>
+      <p class="caption">パレート集合は x<sub>1</sub> が [0, 1]、x<sub>2</sub>…x<sub>30</sub> が 0。フロントは f<sub>2</sub> = 1 − √f<sub>1</sub>（f<sub>1</sub> は 0 から 1）です。</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel plot-panel" aria-labelledby="plotHeading">
+      <div class="panel-head">
+        <h2 id="plotHeading">目的空間</h2>
+        <label class="check"><input id="trail" type="checkbox" checked> 前世代を薄く残す</label>
+      </div>
+      <div class="canvas-grow" id="plotWrap">
+        <canvas id="plot" aria-label="目的空間。横軸 f1、縦軸 f2。曲線がパレートフロント、点が今の個体群です。"></canvas>
+      </div>
+      <p class="legend">
+        <span class="key"><i class="swatch swatch-front"></i>真のパレートフロント</span>
+        <span class="key"><i class="swatch swatch-pop"></i>今の個体群（色は x<sub>2</sub>…x<sub>30</sub> の平均。0 に近いほど朱色）</span>
+        <span class="key"><i class="swatch swatch-trail"></i>前世代</span>
+        <span class="key">縦軸は 1.15 より上を圧縮</span>
+      </p>
+    </section>
+
+    <section class="panel gene-panel" id="genePanel" aria-labelledby="geneHeading">
+      <div class="panel-head">
+        <h2 id="geneHeading">遺伝子</h2>
+      </div>
+      <p class="callout">x<sub>2</sub>…x<sub>30</sub> は 0 に向かって縮み、x<sub>1</sub> は [0, 1] に広がったまま残ります。</p>
+
+      <div class="gene-block">
+        <div class="block-head">
+          <h3>選択した個体</h3>
+          <p id="selectedSummary">点を選ぶと、その個体の遺伝子を表示します。</p>
+        </div>
+        <div class="canvas-fixed" id="selectedWrap">
+          <canvas id="selectedGenes" aria-label="選択した個体の遺伝子 x1 から x30"></canvas>
+        </div>
+      </div>
+
+      <div class="gene-block grow">
+        <div class="block-head">
+          <h3>個体群 <span class="quiet">行は x<sub>1</sub> の順</span></h3>
+          <p class="summary">
+            x<sub>1</sub> の範囲 <span id="x1Range">—</span>
+            <span class="sep">·</span>
+            x<sub>2</sub>…x<sub>30</sub> の平均 <span id="meanTailPanel">—</span>
+          </p>
+        </div>
+        <div class="canvas-grow" id="heatmapWrap">
+          <canvas id="heatmap" aria-label="個体群の遺伝子。列が x1 から x30、行が個体。色が薄いほど 0 に近い。"></canvas>
+        </div>
+      </div>
+
+      <div class="gene-block">
+        <div class="block-head">
+          <h3>世代ごとの x<sub>2</sub>…x<sub>30</sub> の平均</h3>
+        </div>
+        <div class="canvas-fixed" id="trendWrap">
+          <canvas id="trend" aria-label="世代ごとの x2 から x30 の平均"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="controls">
+      <div class="playback">
+        <button type="button" id="play" class="primary">再生</button>
+        <button type="button" id="step">1世代進む</button>
+        <button type="button" id="restart">最初から</button>
+        <label class="field field-range">
+          <span>速度 <strong id="speedValue">8</strong> 世代/秒</span>
+          <input id="speed" type="range" min="1" max="40" step="1" value="8">
+        </label>
+        <label class="field">
+          <span>シード</span>
+          <input id="seed" type="number" min="0" step="1" value="42">
+        </label>
+        <button type="button" id="reseed">別のシード</button>
+      </div>
+      <div class="params">
+        <label class="field">
+          <span>個体群サイズ</span>
+          <input id="popSize" type="number" min="10" max="300" step="1" value="80">
+        </label>
+        <label class="field">
+          <span>突然変異率</span>
+          <input id="mutation" type="number" min="0" max="1" step="0.001" value="0.0333">
+        </label>
+        <label class="field">
+          <span>交叉率</span>
+          <input id="crossover" type="number" min="0" max="1" step="0.01" value="0.9">
+        </label>
+        <label class="field">
+          <span>世代の上限</span>
+          <input id="cap" type="number" min="1" max="2000" step="1" value="200">
+        </label>
+      </div>
+    </div>
+    <p class="algo">交叉は SBX（ηc = 20）、突然変異は多項式変異（ηm = 20、初期値は 1/30）。トーナメントはランク優先で、同じランクなら混雑距離が大きい個体を残します。</p>
+    <p id="statusLine" class="status-line">Space で再生と一時停止、→ で 1 世代進みます。個体群サイズとシードは「最初から」で反映されます。</p>
+  </footer>
+
+  <script src="js/nsga2.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
